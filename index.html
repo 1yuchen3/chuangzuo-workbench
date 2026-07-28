@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>雨辰的创作工作台</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="创作工作台">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --border:#2a3441;
+    --text:#e6edf3; --muted:#8b98a9; --accent:#e94560; --accent2:#4f9cff;
+    --green:#3fb950; --yellow:#e3b341; --purple:#a371f7; --teal:#39c5cf;
+    --radius:14px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei","PingFang SC",sans-serif}
+  body{background:var(--bg);color:var(--text);min-height:100vh}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#30394a;border-radius:4px}
+
+  /* ===== 顶部栏 ===== */
+  header{
+    padding:calc(14px + env(safe-area-inset-top)) 22px 12px;
+    display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);
+    background:rgba(13,17,23,.92);backdrop-filter:blur(8px);z-index:30;
+  }
+  .menu-btn{display:none;background:transparent;border:1px solid var(--border);color:var(--text);
+    width:40px;height:40px;border-radius:10px;font-size:20px;cursor:pointer;flex-shrink:0}
+  .brand{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+  .brand .logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--purple));display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+  .brand h1{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .brand p{font-size:11px;color:var(--muted);margin-top:1px}
+  .date-box{text-align:right;flex-shrink:0}
+  .date-box .d{font-size:14px;font-weight:600}
+  .date-box .u{font-size:10px;color:var(--muted);margin-top:2px}
+
+  /* ===== 整体布局：左侧栏 + 主区 ===== */
+  .layout{display:flex;align-items:flex-start}
+  .sidebar{
+    width:172px;flex-shrink:0;border-right:1px solid var(--border);
+    position:sticky;top:0;height:100vh;overflow-y:auto;
+    background:var(--bg);padding:16px 12px;z-index:20;
+  }
+  .sidebar .nav-title{font-size:11px;color:var(--muted);padding:0 8px 8px;letter-spacing:1px}
+  nav{display:flex;flex-direction:column;gap:6px}
+  nav button{
+    background:transparent;border:1px solid transparent;color:var(--muted);
+    padding:11px 13px;border-radius:11px;cursor:pointer;font-size:13.5px;
+    transition:.15s;text-align:left;display:flex;align-items:center;gap:9px;line-height:1.2;
+  }
+  nav button:hover{color:var(--text);background:var(--panel)}
+  nav button.active{background:linear-gradient(135deg,var(--accent),var(--purple));border-color:transparent;color:#fff;font-weight:600;box-shadow:0 4px 14px rgba(233,69,96,.25)}
+
+  main{padding:22px 26px 60px;flex:1;min-width:0;max-width:1100px}
+  section{display:none}
+  section.show{display:block;animation:fadein .25s ease}
+  @keyframes fadein{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:14px}
+  .card h3{font-size:15px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .sub{color:var(--muted);font-size:12px;line-height:1.7}
+  .tag{display:inline-block;font-size:11px;padding:2px 10px;border-radius:10px;margin:2px 4px 2px 0;background:#232c3d;color:var(--accent2)}
+  .btn{background:var(--accent);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-size:13px;transition:.15s}
+  .btn:hover{filter:brightness(1.15)}
+  .btn.ghost{background:transparent;border:1px solid var(--border);color:var(--muted)}
+  .btn.ghost:hover{color:var(--text)}
+  .btn.sm{padding:5px 12px;font-size:12px}
+  .btn.teal{background:var(--teal);color:#06222a}
+  input[type=text],textarea,select,input[type=date],input[type=number]{
+    width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    padding:9px 12px;border-radius:8px;font-size:13px;outline:none;
+  }
+  input:focus,textarea:focus{border-color:var(--accent2)}
+  textarea{resize:vertical;min-height:64px}
+  label{font-size:12px;color:var(--muted);display:block;margin:10px 0 5px}
+
+  /* ===== 概览统计条 ===== */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+  .stat .n{font-size:24px;font-weight:700}
+  .stat .l{font-size:12px;color:var(--muted);margin-top:4px}
+
+  /* ===== 任务 ===== */
+  .task-add{display:flex;gap:10px;margin-bottom:14px}
+  .task-add input{flex:1}
+  .task-item{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;margin-bottom:8px;transition:.15s}
+  .task-item:hover{border-color:#3d4a5c}
+  .task-item.done .t-text{text-decoration:line-through;color:var(--muted)}
+  .task-check{width:20px;height:20px;border-radius:6px;border:2px solid var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;color:#fff}
+  .task-item.done .task-check{background:var(--green);border-color:var(--green)}
+  .t-text{flex:1;font-size:14px}
+  .t-cat{font-size:11px;padding:2px 8px;border-radius:8px;flex-shrink:0}
+  .cat-漫剧{background:rgba(163,113,247,.15);color:var(--purple)}
+  .cat-电商{background:rgba(57,197,207,.15);color:var(--teal)}
+  .cat-学习{background:rgba(227,179,65,.15);color:var(--yellow)}
+  .cat-其他{background:rgba(139,152,169,.15);color:var(--muted)}
+  .t-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;opacity:0;transition:.15s}
+  .task-item:hover .t-del{opacity:1}
+  .t-del:hover{color:var(--accent)}
+  .progress-wrap{height:8px;background:var(--panel2);border-radius:4px;overflow:hidden;margin:6px 0 16px}
+  .progress-bar{height:100%;background:linear-gradient(90deg,var(--accent),var(--purple));border-radius:4px;transition:width .4s}
+
+  /* ===== 热点 ===== */
+  .hot-card{border-left:3px solid var(--accent)}
+  .hot-heat{color:var(--yellow);font-size:12px;font-weight:600}
+  .hot-block{margin-top:10px;padding:10px 12px;background:var(--panel2);border-radius:8px;font-size:13px;line-height:1.8}
+  .hot-block b{color:var(--accent2)}
+  .hot-block.remix b{color:var(--green)}
+
+  /* ===== 复盘 ===== */
+  .review-item{border-left:3px solid var(--accent2)}
+  .review-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .review-data{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0}
+  .review-data span{font-size:12px;color:var(--muted)}
+  .review-data b{color:var(--text);font-size:14px}
+  .rv-block{margin-top:8px;padding:9px 12px;background:var(--panel2);border-radius:8px;font-size:13px;line-height:1.7}
+  .rv-block .lb{font-size:11px;font-weight:700;display:block;margin-bottom:3px}
+  .lb.bad{color:var(--yellow)} .lb.good{color:var(--green)} .lb.ai{color:var(--purple)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  /* ===== 灵感 ===== */
+  .insp-card{border-left:3px solid var(--purple)}
+  .insp-type{font-size:11px;color:var(--purple);font-weight:700}
+  .insp-fav{cursor:pointer;font-size:18px;background:none;border:none;color:var(--muted)}
+  .insp-fav.on{color:var(--yellow)}
+
+  /* ===== 学习 ===== */
+  .learn-track{margin-bottom:20px}
+  .learn-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .learn-head h4{font-size:14px}
+  .learn-pct{font-size:13px;font-weight:700}
+  .milestone{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:6px;background:var(--panel2);font-size:13px}
+  .milestone .mcheck{width:17px;height:17px;border-radius:5px;border:2px solid var(--muted);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
+  .milestone.done .mcheck{background:var(--green);border-color:var(--green)}
+  .milestone.done span{color:var(--muted);text-decoration:line-through}
+  .milestone .m-del{margin-left:auto;background:none;border:none;color:var(--muted);cursor:pointer;opacity:0}
+  .milestone:hover .m-del{opacity:1}
+
+  /* ===== AI 视频拆分 ===== */
+  .ai-card{border-left:3px solid var(--purple)}
+  .ai-input-row{display:flex;gap:10px;flex-wrap:wrap}
+  .ai-input-row input[type=text]{flex:1;min-width:220px}
+  .ai-note{font-size:11.5px;color:var(--muted);background:var(--panel2);border-radius:8px;padding:9px 12px;line-height:1.7;margin-top:10px}
+  .chip{display:inline-block;cursor:pointer;font-size:12px;padding:6px 12px;border-radius:14px;margin:4px 6px 4px 0;
+    background:var(--panel2);border:1px solid var(--border);color:var(--muted);user-select:none;transition:.15s}
+  .chip.on{background:rgba(163,113,247,.18);border-color:var(--purple);color:var(--purple);font-weight:600}
+  .chip.l-on{background:rgba(233,69,96,.16);border-color:var(--accent);color:var(--accent);font-weight:600}
+  .ai-grp-title{font-size:13px;font-weight:700;margin:16px 0 4px;color:var(--text)}
+  .ai-grp-title small{color:var(--muted);font-weight:400;font-size:11px;margin-left:6px}
+  .ai-result{margin-top:6px}
+  .ai-block{margin-top:12px;padding:12px 14px;background:var(--panel2);border-radius:10px;font-size:13px;line-height:1.85}
+  .ai-block .lb{font-size:12px;font-weight:700;color:var(--accent2);display:block;margin-bottom:5px}
+  .ai-block .lb.l{color:var(--accent)} .ai-block .lb.t{color:var(--teal)}
+  .prompt-box{background:#0b0f15;border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:12.5px;line-height:1.8;white-space:pre-wrap;word-break:break-word;color:#cdd9e5;margin-top:8px}
+  .prompt-box .pl{color:var(--yellow);font-weight:700}
+  .ai-hist-item{border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;background:var(--panel)}
+  .ai-hist-item .h-link{font-size:12px;color:var(--accent2);word-break:break-all}
+  .ai-hist-item .h-meta{font-size:11px;color:var(--muted);margin-top:4px}
+  .empty{text-align:center;color:var(--muted);padding:30px 0;font-size:13px}
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;z-index:35}
+  .overlay.show{display:block}
+  /* ===== 安装横条 ===== */
+  .install-bar{position:fixed;left:12px;right:12px;bottom:calc(14px + env(safe-area-inset-bottom));background:linear-gradient(135deg,var(--accent),var(--purple));border-radius:14px;padding:12px 16px;display:none;align-items:center;gap:12px;justify-content:space-between;z-index:46;box-shadow:0 8px 28px rgba(0,0,0,.45)}
+  .install-bar .ib-txt{flex:1;min-width:0}
+  .install-bar .ib-txt .t{font-size:13.5px;font-weight:700;color:#fff}
+  .install-bar .ib-txt .s{font-size:11px;color:rgba(255,255,255,.82);margin-top:2px;line-height:1.5}
+  .install-bar .btn{background:#fff;color:var(--accent);font-weight:700;flex-shrink:0;padding:9px 16px}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
+  .modal-bg.show{display:flex}
+  .modal{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:22px;width:min(560px,92vw);max-height:88vh;overflow-y:auto}
+  .modal h3{margin-bottom:6px}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+
+  /* ===== 移动端：侧边栏变抽屉 ===== */
+  @media(max-width:760px){
+    .menu-btn{display:flex}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .grid2{grid-template-columns:1fr}
+    .brand p{display:none}
+    .date-box{display:none}
+    .layout{flex-direction:column}
+    .sidebar{position:fixed;top:0;left:0;height:100%;transform:translateX(-100%);transition:.25s;box-shadow:6px 0 24px rgba(0,0,0,.5);width:200px;z-index:40}
+    .sidebar.open{transform:none}
+    main{padding:16px 14px calc(40px + env(safe-area-inset-bottom))}
+    .card{padding:14px 14px}
+    .task-add{flex-wrap:wrap}
+    .task-add input[type=text]{min-width:100%}
+    .t-del,.m-del{opacity:1}
+    .ai-input-row input[type=text]{min-width:100%}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+  <div class="brand">
+    <div class="logo">🎬</div>
+    <div>
+      <h1>创作工作台</h1>
+      <p>AI 漫剧 × TikTok 跨境电商</p>
+    </div>
+  </div>
+  <div class="date-box">
+    <div class="d" id="todayStr"></div>
+    <div class="u" id="dataUpdated"></div>
+  </div>
+</header>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<div class="install-bar" id="installBar">
+  <div class="ib-txt">
+    <div class="t">📲 把工作台装成手机 APP</div>
+    <div class="s">点右边「安装」，即可全屏运行、无浏览器地址栏、支持离线打开</div>
+  </div>
+  <button class="btn" id="installBtn">安装</button>
+</div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="nav-title">功能导航</div>
+    <nav id="nav">
+      <button data-tab="tasks" class="active">📋 今日任务</button>
+      <button data-tab="hot">🔥 爆款热点</button>
+      <button data-tab="review">📊 内容复盘</button>
+      <button data-tab="insp">💡 每日灵感</button>
+      <button data-tab="learn">📈 学习进程</button>
+      <button data-tab="aisplit">🧩 AI 视频拆分</button>
+    </nav>
+  </aside>
+
+  <main>
+    <!-- ============ 今日任务 ============ -->
+    <section id="tab-tasks" class="show">
+      <div class="stats">
+        <div class="stat"><div class="n" id="stTotal">0</div><div class="l">今日任务</div></div>
+        <div class="stat"><div class="n" id="stDone" style="color:var(--green)">0</div><div class="l">已完成</div></div>
+        <div class="stat"><div class="n" id="stReview" style="color:var(--accent2)">0</div><div class="l">累计复盘</div></div>
+        <div class="stat"><div class="n" id="stStreak" style="color:var(--yellow)">0</div><div class="l">连续打卡（天）</div></div>
+      </div>
+      <div class="card">
+        <h3>📋 今日任务 <span class="sub" id="taskPct" style="margin-left:auto"></span></h3>
+        <div class="progress-wrap"><div class="progress-bar" id="taskBar" style="width:0%"></div></div>
+        <div class="task-add">
+          <input type="text" id="taskInput" placeholder="添加任务，例如：剪一条撕页转场测试片…" onkeydown="if(event.key==='Enter')addTask()">
+          <select id="taskCat" style="width:110px">
+            <option value="漫剧">🎬 漫剧</option>
+            <option value="电商">🛒 电商</option>
+            <option value="学习">📚 学习</option>
+            <option value="其他">📌 其他</option>
+          </select>
+          <button class="btn" onclick="addTask()">添加</button>
+        </div>
+        <div id="taskList"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn ghost sm" onclick="loadTemplate()">⚡ 载入每日固定任务模板</button>
+          <button class="btn ghost sm" onclick="clearDone()">🧹 清除已完成</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🗓 每日固定模板 <span class="sub">（点上方"载入模板"一键加入今天）</span></h3>
+        <div class="sub" style="line-height:2">
+          ① 看今日爆款热点 + 选 1 个可二创的转场 &nbsp;② 产出/剪辑 1 条漫剧内容 &nbsp;③ TikTok 选品/店铺运营 30 分钟 &nbsp;④ 发布并记录数据 &nbsp;⑤ 学习打卡 30 分钟 &nbsp;⑥ 复盘昨天发布的内容
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 爆款热点 ============ -->
+    <section id="tab-hot">
+      <div class="card" style="border-left:3px solid var(--yellow)">
+        <h3>🔥 抖音爆款转场 · 热点雷达</h3>
+        <div class="sub">每天自动抓取最新爆款转场与热点玩法，并附「二创改编思路」。数据更新时间：<b id="hotUpdated" style="color:var(--yellow)"></b>（由每日定时任务自动刷新）</div>
+      </div>
+      <div id="hotList"></div>
+    </section>
+
+    <!-- ============ 内容复盘 ============ -->
+    <section id="tab-review">
+      <div class="card" style="border-left:3px solid var(--accent2)">
+        <h3>📊 内容复盘 <button class="btn sm" style="margin-left:auto" onclick="openReviewModal()">＋ 新增复盘</button></h3>
+        <div class="sub">每次发布后记录数据和问题，工作台自动帮你沉淀「优化清单」。复盘越多，下次的内容越准。</div>
+      </div>
+      <div id="reviewList"></div>
+    </section>
+
+    <!-- ============ 每日灵感 ============ -->
+    <section id="tab-insp">
+      <div class="card" style="border-left:3px solid var(--purple)">
+        <h3>💡 每日灵感</h3>
+        <div class="sub">结合当日热点 + 你的两条主业方向自动生成，点 ⭐ 收藏好点子。更新时间：<b id="inspUpdated" style="color:var(--purple)"></b></div>
+      </div>
+      <div id="inspList"></div>
+      <div class="card" id="favCard" style="display:none">
+        <h3>⭐ 我的灵感收藏</h3>
+        <div id="favList"></div>
+      </div>
+    </section>
+
+    <!-- ============ 学习进程 ============ -->
+    <section id="tab-learn">
+      <div class="card" style="border-left:3px solid var(--green)">
+        <h3>📈 AI 学习进程</h3>
+        <div class="sub">两条学习线的里程碑追踪。勾选完成里程碑，进度条自动更新；可自行添加新里程碑。</div>
+      </div>
+      <div class="card learn-track" id="track-manju"></div>
+      <div class="card learn-track" id="track-tiktok"></div>
+    </section>
+
+    <!-- ============ AI 视频拆分 ============ -->
+    <section id="tab-aisplit">
+      <div class="card ai-card">
+        <h3>🧩 AI 视频拆分 <span class="sub" style="margin-left:auto">粘贴抖音链接，拆解它的光影 / 转场 / AI 提示词</span></h3>
+        <div class="ai-note">
+          💡 纯本地 APP 无法直接抓取抖音视频画面。请粘贴链接，并<b>补充你看到的画面描述</b>（越具体越准），系统据此智能推测光影、转场手法，并生成可直接用的 AI 提示词。<br>
+          需要逐帧深度拆解时，点「📨 发给 WorkBuddy 深度分析」会生成一份分析请求，复制后发给我即可。
+        </div>
+
+        <label>① 抖音 / TikTok 视频链接</label>
+        <div class="ai-input-row">
+          <input type="text" id="aiLink" placeholder="粘贴视频链接，例如 https://v.douyin.com/xxxx/">
+          <button class="btn" onclick="analyzeVideo()">🔍 开始拆解</button>
+        </div>
+
+        <label>② 你看到的画面描述（选填，但强烈建议填——决定推测准度）</label>
+        <textarea id="aiDesc" placeholder="例如：主角从黑暗里走出来，背后有蓝色体积光，转场是画面快速旋转甩镜切到下一幕，中间有一段人物变 scenery 的形变…"></textarea>
+
+        <div class="ai-result" id="aiResult" style="display:none">
+          <div class="ai-grp-title">③ 推测的光影风格 <small>点选修正 / 补充</small></div>
+          <div id="aiLights"></div>
+
+          <div class="ai-grp-title">④ 推测的转场手法 <small>点选修正 / 补充</small></div>
+          <div id="aiTrans"></div>
+
+          <div class="ai-grp-title">⑤ AI 提示词生成器 <small>填主体/风格，实时生成可复制提示词</small></div>
+          <div class="grid2">
+            <div><label>主体 / 角色</label><input type="text" id="sp_subj" value="一个动漫风格少女" oninput="genPrompt()"></div>
+            <div><label>整体风格</label><input type="text" id="sp_style" value="写实与动漫混合，电影感" oninput="genPrompt()"></div>
+            <div><label>情绪 / 氛围</label><input type="text" id="sp_mood" value="神秘、情绪张力、高级感" oninput="genPrompt()"></div>
+            <div><label>镜头 / 构图</label><input type="text" id="sp_cam" value="中景、浅景深、动态构图" oninput="genPrompt()"></div>
+          </div>
+
+          <div class="ai-block" style="margin-top:14px">
+            <span class="lb">🎨 中文提示词描述</span>
+            <div class="prompt-box" id="spCn"></div>
+            <span class="lb" style="margin-top:12px">🔤 英文 AI 提示词（图生图 / 图生视频通用）</span>
+            <div class="prompt-box" id="spEn"></div>
+            <span class="lb" style="margin-top:12px">🚫 负向提示词（避免翻车）</span>
+            <div class="prompt-box" id="spNeg"></div>
+            <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+              <button class="btn ghost sm" onclick="copyPrompt('spCn')">📋 复制中文</button>
+              <button class="btn ghost sm" onclick="copyPrompt('spEn')">📋 复制英文</button>
+              <button class="btn ghost sm" onclick="copyPrompt('spNeg')">📋 复制负向</button>
+              <button class="btn sm" onclick="saveSplit()">💾 保存这次拆解</button>
+            </div>
+          </div>
+
+          <div class="ai-block" style="margin-top:12px">
+            <span class="lb">📨 需要逐帧深度拆解？</span>
+            <div class="sub" style="font-size:12.5px;line-height:1.8">把下面这行请求复制后发给我（WorkBuddy），我会结合链接和你的描述，给出更精准的光影参数、转场步骤和可复现的提示词。</div>
+            <div class="prompt-box" id="spAsk" style="margin-top:8px"></div>
+            <button class="btn ghost sm" style="margin-top:10px" onclick="copyPrompt('spAsk')">📋 复制分析请求</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🗂 我的拆解记录 <span class="sub" id="aiHistCount" style="margin-left:auto"></span></h3>
+        <div id="aiHist"></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- 复盘弹窗 -->
+<div class="modal-bg" id="reviewModal">
+  <div class="modal">
+    <h3>📊 新增内容复盘</h3>
+    <div class="sub">发布后 24 小时填一次数据即可</div>
+    <div class="grid2">
+      <div><label>发布日期</label><input type="date" id="rvDate"></div>
+      <div><label>平台</label><select id="rvPlatform"><option>抖音</option><option>TikTok</option><option>其他</option></select></div>
+    </div>
+    <label>内容标题 / 简述</label>
+    <input type="text" id="rvTitle" placeholder="例如：漫剧第3集 · 撕页转场版">
+    <div class="grid2">
+      <div><label>播放量</label><input type="number" id="rvViews" placeholder="0"></div>
+      <div><label>点赞</label><input type="number" id="rvLikes" placeholder="0"></div>
+      <div><label>评论</label><input type="number" id="rvComments" placeholder="0"></div>
+      <div><label>完播率 %（选填）</label><input type="number" id="rvFinish" placeholder="如 32"></div>
+    </div>
+    <label>😕 哪里不满意 / 数据卡点</label>
+    <textarea id="rvProblem" placeholder="例如：前3秒流失严重；转场卡顿；文案没有钩子…"></textarea>
+    <label>✅ 下次怎么优化</label>
+    <textarea id="rvPlan" placeholder="例如：开头直接放冲突画面；转场对齐动势；文案加悬念句…"></textarea>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeReviewModal()">取消</button>
+      <button class="btn" onclick="saveReview()">保存复盘</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+/* ================= 工具 ================= */
+const $ = id => document.getElementById(id);
+const todayKey = () => new Date().toISOString().slice(0,10);
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch(e){ return d; } };
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const esc = s => String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ================= 应用内安装（PWA） ================= */
+let deferredPrompt = null, appInstalled = false;
+const installBar = $('installBar');
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBar.style.display = 'flex';
+});
+window.addEventListener('appinstalled', () => {
+  appInstalled = true; installBar.style.display = 'none'; deferredPrompt = null; toast('已安装为独立 APP 🎉');
+});
+$('installBtn').addEventListener('click', async () => {
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    try { await deferredPrompt.userChoice; } catch(e){}
+    deferredPrompt = null; installBar.style.display = 'none';
+  } else {
+    // 未捕获到安装事件：给手动指引
+    alert('如点「安装」没反应，请这样装：\n\n1) 在 Chrome 地址栏右侧找「安装」图标（⬇ 或 显示器带 + 号），点它 → 安装；\n2) 或点右上角 ⋮ → 看是否有「安装应用 / Install app」（带 APP 名，不是普通"添加到主屏幕"）；\n3) 部分国产安卓用 Edge 浏览器装更稳，重复上面步骤即可。\n\n若之前已加的图标还是网页，请长按删除，再用本页按钮重装。');
+  }
+});
+// 兜底：5 秒后若没触发安装事件且未安装，给出手动安装提示按钮
+setTimeout(()=>{
+  if(!deferredPrompt && !appInstalled) installBar.style.display = 'flex';
+}, 5000);
+
+/* ================= 顶部日期 ================= */
+const now = new Date();
+$('todayStr').textContent = now.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+$('dataUpdated').textContent = '热点：' + (window.DASH_DATA?.updatedAt || '暂无');
+
+/* ================= 导航 ================= */
+function toggleSidebar(){ $('sidebar').classList.toggle('open'); $('overlay').classList.toggle('show'); }
+document.querySelectorAll('#nav button').forEach(b=>{
+  b.onclick = ()=>{
+    document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('main section').forEach(x=>x.classList.remove('show'));
+    b.classList.add('active');
+    $('tab-'+b.dataset.tab).classList.add('show');
+    if(window.innerWidth<=760) toggleSidebar();
+  };
+});
+
+/* ================= 任务 ================= */
+let taskStore = load('wb_tasks', {});
+let tasks = taskStore[todayKey()] || [];
+const TEMPLATE = [
+  ['看今日爆款热点，选 1 个可二创的转场','学习'],
+  ['产出 / 剪辑 1 条漫剧内容','漫剧'],
+  ['TikTok 选品 / 店铺运营 30 分钟','电商'],
+  ['发布内容并记录初始数据','其他'],
+  ['学习打卡 30 分钟（教程/课程）','学习'],
+  ['复盘昨天发布的内容','其他'],
+];
+function persistTasks(){ taskStore[todayKey()] = tasks; save('wb_tasks', taskStore); renderTasks(); }
+function addTask(){
+  const v = $('taskInput').value.trim();
+  if(!v) return;
+  tasks.push({text:v, cat:$('taskCat').value, done:false});
+  $('taskInput').value='';
+  persistTasks();
+}
+function loadTemplate(){
+  TEMPLATE.forEach(([t,c])=>{ if(!tasks.some(x=>x.text===t)) tasks.push({text:t,cat:c,done:false}); });
+  persistTasks();
+}
+function clearDone(){ tasks = tasks.filter(t=>!t.done); persistTasks(); }
+function toggleTask(i){ tasks[i].done=!tasks[i].done; persistTasks(); }
+function delTask(i){ tasks.splice(i,1); persistTasks(); }
+function renderTasks(){
+  const list = $('taskList');
+  if(!tasks.length){ list.innerHTML = '<div class="empty">今天还没有任务，添加一个或点下方"载入模板" 👇</div>'; }
+  else list.innerHTML = tasks.map((t,i)=>`
+    <div class="task-item ${t.done?'done':''}">
+      <div class="task-check" onclick="toggleTask(${i})">${t.done?'✓':''}</div>
+      <div class="t-text">${esc(t.text)}</div>
+      <span class="t-cat cat-${t.cat}">${t.cat}</span>
+      <button class="t-del" onclick="delTask(${i})">✕</button>
+    </div>`).join('');
+  const done = tasks.filter(t=>t.done).length;
+  $('stTotal').textContent = tasks.length;
+  $('stDone').textContent = done;
+  const pct = tasks.length? Math.round(done/tasks.length*100):0;
+  $('taskBar').style.width = pct+'%';
+  $('taskPct').textContent = pct+'% 完成';
+  let streak=0, d=new Date();
+  for(;;){
+    const k=d.toISOString().slice(0,10);
+    const arr=taskStore[k]||[];
+    if(arr.some(t=>t.done)) streak++; else if(k!==todayKey()) break;
+    if(k!==todayKey() && !arr.some(t=>t.done)) break;
+    d.setDate(d.getDate()-1);
+    if(streak>365) break;
+  }
+  $('stStreak').textContent = streak;
+}
+
+/* ================= 热点 ================= */
+function renderHot(){
+  const data = window.DASH_DATA||{};
+  $('hotUpdated').textContent = data.updatedAt||'暂无';
+  const list=$('hotList');
+  if(!data.hotspots?.length){ list.innerHTML='<div class="empty">暂无热点数据，等待每日定时任务更新</div>'; return; }
+  list.innerHTML = data.hotspots.map(h=>`
+    <div class="card hot-card">
+      <h3>${esc(h.title)} <span class="hot-heat" style="margin-left:auto">🔥 ${esc(h.heat)}</span></h3>
+      <div class="sub" style="font-size:13px;color:var(--text);line-height:1.8">${esc(h.desc)}</div>
+      <div class="hot-block"><b>💥 为什么会爆：</b>${esc(h.why)}</div>
+      <div class="hot-block remix"><b>🎨 二创改编思路：</b>${esc(h.remix)}</div>
+      <div style="margin-top:10px">${(h.tags||[]).map(t=>`<span class="tag">#${esc(t)}</span>`).join('')}</div>
+    </div>`).join('');
+}
+
+/* ================= 复盘 ================= */
+let reviews = load('wb_reviews', []);
+function openReviewModal(){ $('rvDate').value=todayKey(); $('reviewModal').classList.add('show'); }
+function closeReviewModal(){ $('reviewModal').classList.remove('show'); }
+function saveReview(){
+  const r = {
+    date:$('rvDate').value||todayKey(), platform:$('rvPlatform').value,
+    title:$('rvTitle').value.trim()||'未命名内容',
+    views:+$('rvViews').value||0, likes:+$('rvLikes').value||0,
+    comments:+$('rvComments').value||0, finish:$('rvFinish').value,
+    problem:$('rvProblem').value.trim(), plan:$('rvPlan').value.trim(),
+    ts:Date.now()
+  };
+  reviews.unshift(r); save('wb_reviews', reviews);
+  ['rvTitle','rvViews','rvLikes','rvComments','rvFinish','rvProblem','rvPlan'].forEach(id=>$(id).value='');
+  closeReviewModal(); renderReviews();
+}
+function delReview(ts){ reviews = reviews.filter(r=>r.ts!==ts); save('wb_reviews',reviews); renderReviews(); }
+function autoAdvice(r){
+  const tips=[];
+  const rate = r.views? (r.likes/r.views*100):0;
+  if(r.views>0 && rate<2) tips.push('点赞率 '+rate.toFixed(1)+'%（<2%）：内容共鸣不足，试试加情绪反差或热梗钩子');
+  if(r.views>0 && rate>=5) tips.push('点赞率 '+rate.toFixed(1)+'% 很优秀！这类内容值得做成系列连载');
+  if(r.finish && +r.finish<20) tips.push('完播率 '+r.finish+'%（<20%）：前3秒钩子不够，开头直接上冲突/悬念画面');
+  if(r.finish && +r.finish>=40) tips.push('完播率 '+r.finish+'% 很强！节奏模板可以固定下来复用');
+  if(r.views>0 && r.comments/Math.max(r.views,1)*1000<1) tips.push('评论偏少：结尾加提问或"下一集想看什么"引导互动');
+  if(!tips.length) tips.push('数据记录完整，坚持复盘，3~5 条后就能看出你的内容规律');
+  return tips;
+}
+function renderReviews(){
+  $('stReview').textContent = reviews.length;
+  const list=$('reviewList');
+  if(!reviews.length){ list.innerHTML='<div class="empty">还没有复盘记录。发布内容后点右上角「＋新增复盘」开始积累 📈</div>'; return; }
+  list.innerHTML = reviews.map(r=>`
+    <div class="card review-item">
+      <div class="review-head">
+        <h3 style="margin:0">${esc(r.title)} <span class="tag">${esc(r.platform)}</span></h3>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="sub">${esc(r.date)}</span>
+          <button class="t-del" style="opacity:1" onclick="delReview(${r.ts})">✕</button>
+        </div>
+      </div>
+      <div class="review-data">
+        <span>播放 <b>${r.views.toLocaleString()}</b></span>
+        <span>点赞 <b>${r.likes.toLocaleString()}</b></span>
+        <span>评论 <b>${r.comments.toLocaleString()}</b></span>
+        ${r.finish?`<span>完播 <b>${esc(r.finish)}%</b></span>`:''}
+        ${r.views?`<span>点赞率 <b>${(r.likes/r.views*100).toFixed(1)}%</b></span>`:''}
+      </div>
+      ${r.problem?`<div class="rv-block"><span class="lb bad">😕 问题</span>${esc(r.problem)}</div>`:''}
+      ${r.plan?`<div class="rv-block"><span class="lb good">✅ 下次优化</span>${esc(r.plan)}</div>`:''}
+      <div class="rv-block"><span class="lb ai">🤖 数据自动诊断</span>${autoAdvice(r).map(esc).join('<br>')}</div>
+    </div>`).join('');
+}
+
+/* ================= 灵感 ================= */
+let favs = load('wb_favs', []);
+function renderInsp(){
+  const data=window.DASH_DATA||{};
+  $('inspUpdated').textContent = data.updatedAt||'暂无';
+  const list=$('inspList');
+  const insp = data.inspirations||[];
+  if(!insp.length){ list.innerHTML='<div class="empty">暂无灵感，等待每日更新</div>'; }
+  else list.innerHTML = insp.map((it,i)=>{
+    const key = (data.updatedAt||'')+'|'+it.title;
+    const on = favs.some(f=>f.key===key);
+    return `<div class="card insp-card">
+      <h3><span class="insp-type">[${esc(it.type)}]</span> ${esc(it.title)}
+        <button class="insp-fav ${on?'on':''}" style="margin-left:auto" onclick="toggleFav('${esc(key).replace(/'/g,"\\'")}',${i})">★</button>
+      </h3>
+      <div class="sub" style="font-size:13px;color:var(--text);line-height:1.8">${esc(it.desc)}</div>
+    </div>`;
+  }).join('');
+  const fl=$('favList');
+  $('favCard').style.display = favs.length?'block':'none';
+  fl.innerHTML = favs.map(f=>`
+    <div class="milestone"><span style="color:var(--yellow)">★</span>
+      <span style="text-decoration:none;color:var(--text)">${esc(f.title)}</span>
+      <span class="sub" style="margin-left:auto">${esc(f.date)}</span>
+      <button class="m-del" style="opacity:1" onclick="rmFav('${esc(f.key).replace(/'/g,"\\'")}')">✕</button>
+    </div>`).join('');
+}
+function toggleFav(key,i){
+  const it=(window.DASH_DATA?.inspirations||[])[i];
+  const idx=favs.findIndex(f=>f.key===key);
+  if(idx>=0) favs.splice(idx,1);
+  else favs.unshift({key,title:it.title+' — '+it.desc,date:window.DASH_DATA?.updatedAt||todayKey()});
+  save('wb_favs',favs); renderInsp();
+}
+function rmFav(key){ favs=favs.filter(f=>f.key!==key); save('wb_favs',favs); renderInsp(); }
+
+/* ================= 学习进程 ================= */
+const DEFAULT_LEARN = {
+  manju:{ name:'🎬 AI 漫剧制作', color:'var(--purple)', items:[
+    {t:'掌握 AI 图像生成基础（角色一致性）',d:false},
+    {t:'学会图生视频工作流（即梦/可灵等）',d:false},
+    {t:'剪映进阶：蒙版转场 / 关键帧',d:false},
+    {t:'写出第一个漫剧分集脚本',d:false},
+    {t:'完成第一部 3 集连载漫剧',d:false},
+    {t:'单条视频播放破 1 万',d:false},
+  ]},
+  tiktok:{ name:'🛒 TikTok 跨境电商', color:'var(--teal)', items:[
+    {t:'搞懂 TikTok Shop 开店流程与平台规则',d:false},
+    {t:'掌握选品方法（数据工具 + 趋势判断）',d:false},
+    {t:'学会带货短视频脚本结构',d:false},
+    {t:'上架第一批商品',d:false},
+    {t:'跑通第一单',d:false},
+    {t:'单月 GMV 破 $1000',d:false},
+  ]}
+};
+let learn = load('wb_learn', DEFAULT_LEARN);
+function persistLearn(){ save('wb_learn', learn); renderLearn(); }
+function toggleMile(track,i){ learn[track].items[i].d=!learn[track].items[i].d; persistLearn(); }
+function delMile(track,i){ learn[track].items.splice(i,1); persistLearn(); }
+function addMile(track){
+  const inp=$('mi-'+track); const v=inp.value.trim(); if(!v)return;
+  learn[track].items.push({t:v,d:false}); inp.value=''; persistLearn();
+}
+function renderLearn(){
+  ['manju','tiktok'].forEach(track=>{
+    const tr=learn[track];
+    const done=tr.items.filter(x=>x.d).length;
+    const pct=tr.items.length?Math.round(done/tr.items.length*100):0;
+    $('track-'+track).innerHTML=`
+      <div class="learn-head"><h4>${tr.name}</h4><span class="learn-pct" style="color:${tr.color}">${pct}%</span></div>
+      <div class="progress-wrap"><div class="progress-bar" style="width:${pct}%;background:${tr.color}"></div></div>
+      ${tr.items.map((m,i)=>`
+        <div class="milestone ${m.d?'done':''}">
+          <div class="mcheck" onclick="toggleMile('${track}',${i})">${m.d?'✓':''}</div>
+          <span>${esc(m.t)}</span>
+          <button class="m-del" onclick="delMile('${track}',${i})">✕</button>
+        </div>`).join('')}
+      <div class="task-add" style="margin-top:10px;margin-bottom:0">
+        <input type="text" id="mi-${track}" placeholder="添加新里程碑…" onkeydown="if(event.key==='Enter')addMile('${track}')">
+        <button class="btn sm" onclick="addMile('${track}')">添加</button>
+      </div>`;
+  });
+}
+
+/* ================= AI 视频拆分 ================= */
+const LIGHT_LIB = {
+  side:{name:'电影感侧光', desc:'人物一侧被硬光打亮、另一侧没入阴影，轮廓分明、质感强', prompt:'cinematic side lighting, dramatic chiaroscuro, single hard key light from the left, deep shadow on right side, 35mm film grain'},
+  neon:{name:'霓虹赛博', desc:'蓝/品红霓虹光斑打在脸上与环境中，暗部冷调，科技感强', prompt:'neon cyberpunk lighting, cyan and magenta rim light, dark ambient, wet street reflections, blade runner mood'},
+  soft:{name:'柔光日系', desc:'均匀柔光、低对比、奶油色高调，皮肤通透', prompt:'soft diffused light, low contrast, pastel cream tones, airy japanese photoshoot, even illumination'},
+  back:{name:'逆光剪影', desc:'强逆光使主体成剪影，边缘发光，氛围感强', prompt:'strong backlight silhouette, golden rim light, lens flare, subject as dark silhouette, dreamy bokeh'},
+  god:{name:'体积光/耶稣光', desc:'光束穿透空气或缝隙，空间有纵深和神圣感', prompt:'volumetric god rays, light beams through mist, floating dust particles, ethereal atmosphere, cinematic depth'},
+  warmcool:{name:'冷暖对比', desc:'左暖右冷（或上暖下冷），色彩张力强', prompt:'split lighting, warm orange on left side, cool blue on right side, color contrast, dramatic dual tone'},
+  top:{name:'顶光戏剧', desc:'光从顶部打下来，眼窝与颧骨阴影重，神秘/压抑', prompt:'top down dramatic lighting, deep eye socket shadows, chiaroscuro, moody portrait'},
+  rim:{name:'轮廓光/边缘光', desc:'主体边缘一圈光，与暗背景分离，精致高级', prompt:'rim light outlining subject edge, dark background separation, sleek premium look'}
+};
+const TRANS_LIB = {
+  mask:{name:'蒙版转场', how:'线性/圆形蒙版沿人物运动方向划过，0.4~1s 完成丝滑过渡。', tool:'剪映/PR 蒙版+关键帧'},
+  wipe:{name:'遮罩擦除', how:'用图形/手势做擦除遮罩，露出下一画面。', tool:'剪映关键帧遮罩'},
+  zoom:{name:'缩放穿越', how:'镜头快速放大穿过前景物体（门/花丛）切换到下一场景。', tool:'关键帧缩放+匹配构图'},
+  spin:{name:'旋转甩动', how:'镜头快速旋转或甩动，运动模糊中切入下一镜，动感强。', tool:'剪映旋转+运动模糊'},
+  match:{name:'匹配剪辑', how:'前后两镜相似形状/动作精准对齐（抬手接抬手），无缝衔接。', tool:'对齐首尾帧+关键帧'},
+  morph:{name:'AI 形变 Morph', how:'用图生视频/AI 工具把 A 平滑变成 B（人物变场景、脸变物）。', tool:'即梦/可灵/Runway 形变'},
+  glitch:{name:'故障 Glitch', how:'RGB 分离、像素错位、扫描线，赛博感强。', tool:'剪映故障特效/AE'},
+  tear:{name:'画面撕裂', how:'画面像被撕开/错位，露出下一层内容，叙事感强。', tool:'蒙版+位移关键帧'},
+  dissolve:{name:'遮罩溶解', how:'上一画面局部溶解/消散，下一画面浮现。', tool:'蒙版羽化+不透明度'},
+  lens:{name:'物体遮挡', how:'用前景物体（手/道具）挡住镜头瞬间切换，最自然。', tool:'实拍遮挡+剪辑点'}
+};
+// 关键词 → 命中映射（用于从描述文本推测）
+const LIGHT_KW = {
+  side:[/侧光|硬光|明暗|轮廓光打|一半亮|阴阳/, /侧/],
+  neon:[/霓虹|赛博|蓝紫|品红|蓝红|科技感/],
+  soft:[/柔光|日系|奶油|低对比|通透|清新/],
+  back:[/逆光|剪影|背光|边缘发光/],
+  god:[/体积光|耶稣光|光束|丁达尔|光柱|穿透/],
+  warmcool:[/冷暖|对比色|左暖|双色|撞色/],
+  top:[/顶光|头顶光|上方打光/],
+  rim:[/轮廓光|边缘光|勾边|描边光/]
+};
+const TRANS_KW = {
+  mask:[/蒙版|遮罩擦|擦除|线性划过|划过/],
+  zoom:[/缩放|穿越|放大穿过|推近穿过|穿过物体/],
+  spin:[/旋转|甩动|甩镜|转场甩|眩晕/],
+  match:[/匹配剪辑|对齐|同款动作|形状衔接|无缝衔接/],
+  morph:[/形变|morph|变(成|为|形)|ai变|融化变形/],
+  glitch:[/故障|glitch|像素|错位|rgb分离|扫描线/],
+  tear:[/撕裂|裂开|撕开/],
+  dissolve:[/溶解|消散|羽化淡出|融化消失/],
+  lens:[/遮挡|手挡|道具挡|前景挡/]
+};
+
+let curSplit = { lights:new Set(), trans:new Set() };
+
+function analyzeVideo(){
+  const link = $('aiLink').value.trim();
+  const desc = $('aiDesc').value.trim();
+  if(!link && !desc){ alert('请至少粘贴链接或填写画面描述'); return; }
+
+  // 推测光影
+  let lights = new Set();
+  if(desc){
+    for(const [k,arr] of Object.entries(LIGHT_KW)){ if(arr.some(rx=>rx.test(desc))) lights.add(k); }
+  }
+  if(!lights.size) lights.add('side'); // 默认兜底
+  // 推测转场
+  let trans = new Set();
+  if(desc){
+    for(const [k,arr] of Object.entries(TRANS_KW)){ if(arr.some(rx=>rx.test(desc))) trans.add(k); }
+  }
+  if(!trans.size) trans.add('mask');
+
+  curSplit = { lights, trans };
+  $('aiResult').style.display='block';
+  renderChips();
+  genPrompt();
+
+  // 生成"发给WorkBuddy"请求
+  const lnames = [...lights].map(k=>LIGHT_LIB[k].name).join('、');
+  const tnames = [...trans].map(k=>TRANS_LIB[k].name).join('、');
+  $('spAsk').textContent =
+`请帮我深度拆解这条视频（AI 视频拆分）：
+链接：${link||'（未提供链接，仅凭下方描述）'}
+我看到的画面：${desc||'（未填写）'}
+初步推测——光影：${lnames}；转场：${tnames}
+请输出：① 用 AI 做出来的部分具体光影参数（色温/光位/强度）；② 转场的分步实现方法；③ 可复现的图生图/图生视频提示词（中英文+负向）。`;
+  $('aiResult').scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function renderChips(){
+  $('aiLights').innerHTML = Object.entries(LIGHT_LIB).map(([k,v])=>`
+    <span class="chip ${curSplit.lights.has(k)?'l-on':''}" onclick="toggleChip('lights','${k}')">${v.name}</span>`).join('');
+  $('aiTrans').innerHTML = Object.entries(TRANS_LIB).map(([k,v])=>`
+    <span class="chip ${curSplit.trans.has(k)?'on':''}" onclick="toggleChip('trans','${k}')">${v.name}</span>`).join('');
+}
+function toggleChip(kind,k){
+  const set = curSplit[kind==='lights'?'lights':'trans'];
+  set.has(k)?set.delete(k):set.add(k);
+  renderChips(); genPrompt();
+}
+function genPrompt(){
+  const subj=$('sp_subj').value.trim()||'一个动漫角色';
+  const style=$('sp_style').value.trim()||'写实与动漫混合风格';
+  const mood=$('sp_mood').value.trim()||'电影感、情绪张力';
+  const cam=$('sp_cam').value.trim()||'中景、浅景深';
+  const lights=[...curSplit.lights];
+  const trans=[...curSplit.trans];
+  const lightP = lights.map(k=>LIGHT_LIB[k].prompt).join(', ');
+  const lnames = lights.map(k=>LIGHT_LIB[k].name).join('、');
+  const tnames = trans.map(k=>TRANS_LIB[k].name).join('、');
+
+  const cn = `${style}，${subj}，${mood}，${cam}，${lnames}打光` +
+    (trans.length?`，转场采用${tnames}（${trans.map(k=>TRANS_LIB[k].how).join('；')}）`:'') + '。';
+  const en = [style, subj, mood, cam, lightP, 'high quality, detailed, 8k, masterpiece, cinematic composition']
+    .filter(Boolean).join(', ');
+  const neg = 'low quality, blurry, deformed, extra limbs, bad anatomy, watermark, text, jpeg artifacts, oversaturated';
+
+  $('spCn').textContent = cn;
+  $('spEn').textContent = en;
+  $('spNeg').textContent = neg;
+}
+function copyPrompt(id){
+  const t=$(id).textContent;
+  navigator.clipboard?.writeText(t).then(()=>toast('已复制')).catch(()=>fallbackCopy(t));
+}
+function fallbackCopy(t){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy')}catch(e){} document.body.removeChild(ta); toast('已复制'); }
+let toastT;
+function toast(msg){
+  let el=document.getElementById('toast');
+  if(!el){ el=document.createElement('div'); el.id='toast'; el.style.cssText='position:fixed;bottom:calc(20px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--purple);color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;z-index:99;opacity:0;transition:.2s'; document.body.appendChild(el); }
+  el.textContent=msg; el.style.opacity='1';
+  clearTimeout(toastT); toastT=setTimeout(()=>el.style.opacity='0',1400);
+}
+
+/* 拆解记录历史 */
+let splits = load('wb_splits', []);
+function saveSplit(){
+  const link=$('aiLink').value.trim();
+  const desc=$('aiDesc').value.trim();
+  if(!link && !desc){ alert('先拆解再保存'); return; }
+  const rec = {
+    link, desc,
+    lights:[...curSplit.lights], trans:[...curSplit.trans],
+    cn:$('spCn').textContent, en:$('spEn').textContent, neg:$('spNeg').textContent,
+    ts:Date.now(), date:todayKey()
+  };
+  splits.unshift(rec); save('wb_splits', splits); renderSplits(); toast('已保存拆解');
+}
+function delSplit(ts){ splits=splits.filter(s=>s.ts!==ts); save('wb_splits',splits); renderSplits(); }
+function renderSplits(){
+  $('aiHistCount').textContent = splits.length?`共 ${splits.length} 条`:'';
+  const list=$('aiHist');
+  if(!splits.length){ list.innerHTML='<div class="empty">还没有拆解记录。粘贴抖音链接拆解后点「保存这次拆解」吧 🧩</div>'; return; }
+  list.innerHTML = splits.map(s=>`
+    <div class="ai-hist-item">
+      <div class="h-link">🔗 ${esc(s.link||'（仅描述，无链接）')}</div>
+      <div class="h-meta">${esc(s.date)} · 光影：${s.lights.map(k=>LIGHT_LIB[k]?.name||k).join('、')||'—'} · 转场：${s.trans.map(k=>TRANS_LIB[k]?.name||k).join('、')||'—'}</div>
+      ${s.desc?`<div class="sub" style="margin-top:6px;font-size:12px">📝 ${esc(s.desc)}</div>`:''}
+      ${s.cn?`<div class="sub" style="margin-top:6px;font-size:11.5px;color:var(--accent2)">提示词：${esc(s.cn.slice(0,80))}${s.cn.length>80?'…':''}</div>`:''}
+      <div style="margin-top:8px"><button class="btn ghost sm" onclick="delSplit(${s.ts})">🗑 删除</button></div>
+    </div>`).join('');
+}
+
+/* ================= 初始化 ================= */
+renderTasks(); renderHot(); renderReviews(); renderInsp(); renderLearn(); renderSplits();
+
+/* ================= PWA Service Worker ================= */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
